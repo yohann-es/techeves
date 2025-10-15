@@ -13,15 +13,14 @@ import React, { memo } from 'react';
 const EventsList = memo(({ event }) => { ... });
 
 use a react link tag instead of the normal a tag
-(because the a tag does a complete page refresh but the link tags does some thing else
-  )
+(because the a tag does a complete page refresh but the link tags does some thing else)
 
 */
 
 const EventsList = ({event}) => {
   const [ShowFullDescription, setShowFullDescription] = useState(false);
 
-  let eventDiscription = event.post_info;
+  let eventDiscription = event.message_info;
 
   if(!ShowFullDescription){
     eventDiscription = eventDiscription.substring(0,90) + '...'
@@ -31,6 +30,16 @@ const EventsList = ({event}) => {
     <div 
       className="bg-white rounded-xl shadow-md relative p-4 break-words"
     >
+      {event.message_image && (
+  <div className="w-full h-48 mb-4 overflow-hidden rounded-lg">
+    <img
+      src={`data:image/jpeg;base64,${event.message_image}`}
+      alt={event.title || "Event image"}
+      className="w-full h-full object-cover"
+    />
+  </div>
+)}
+
       <div className="text-gray-600 my-2">ALX</div>
       <h3 className="text-xl font-bold mb-3">Hackathon Event</h3>
 
@@ -58,6 +67,10 @@ const EventsList = ({event}) => {
         >
           View Source
         </a>
+        <div className="text-orange-700 mb-3 flex items-center gap-2">
+          <i className="fa-solid fa-location-dot text-lg"></i>
+          {event.message_date}
+        </div>
       </div>
     </div>
   )
