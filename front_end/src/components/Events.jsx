@@ -21,6 +21,7 @@ https://www.geeksforgeeks.org/reactjs/difference-between-usestate-and-useeffect-
   const fetchEvents = async () => {
     try {
       const response = await api.get('/events');
+      // console.log(response.data)
       setEvents(response.data);
     } catch (error) {
       console.error("Error fetching events", error);
@@ -33,7 +34,7 @@ https://www.geeksforgeeks.org/reactjs/difference-between-usestate-and-useeffect-
 
   // Convert your object into a list to map over
   const eventArray = Object.values(events);
-  const recentEventArray = eventArray.slice(0,6);
+  const recentEventArray = eventArray
   return (
     <>
     <div style={{ padding: '1rem' }}>

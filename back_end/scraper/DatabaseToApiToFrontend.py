@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import psycopg
 import os 
 from dotenv import load_dotenv
-
+import base64
 load_dotenv()
 
 telegram_api_key = os.getenv("TELEGRAM_API_KEY")
@@ -38,7 +38,7 @@ app.add_middleware(
 cursor = connection.cursor()
 
 
-select_query = "SELECT * FROM Telegram_Scraped_Data_v2"
+select_query = "SELECT * FROM Telegram_Scraped_Data_v3"
 
 cursor.execute(select_query)
 
@@ -47,9 +47,13 @@ modified_selected_data_dict = {}
 counter = 0
 for data in selected_data:
     modified_selected_data_dict[f"post{counter}"]= {
-        "database_id": data[0],
+        "message_id": data[0],
         "source_link": data[1],
-        "post_info": data[2]
+        "message_date": data[2],
+        "message_info": data[3],
+        "message_image":   "" if data[4] == None  else base64.b64encode(data[4]).decode("utf-8"),
+        "source_channel": data[5],
+        "source_platform": data[6]
     }
     counter += 1
 
