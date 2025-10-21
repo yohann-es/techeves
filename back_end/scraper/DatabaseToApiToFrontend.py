@@ -51,7 +51,9 @@ for data in selected_data:
         "source_link": data[1],
         "message_date": data[2],
         "message_info": data[3],
-        "message_image":   "" if data[4] == None  else base64.b64encode(data[4]).decode("utf-8")
+        "message_image":   "" if data[4] == None  else base64.b64encode(data[4]).decode("utf-8"),
+        "source_channel": data[5],
+        "source_platform": data[6]
     }
     counter += 1
 

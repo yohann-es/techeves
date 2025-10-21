@@ -31,7 +31,7 @@ const EventsList = ({event}) => {
       className="bg-white rounded-xl shadow-md relative p-4 break-words"
     >
       {event.message_image && (
-  <div className="w-full h-48 mb-4 overflow-hidden rounded-lg">
+  <div  className="w-full h-48 mb-4 overflow-hidden rounded-lg">
     <img
       src={`data:image/jpeg;base64,${event.message_image}`}
       alt={event.title || "Event image"}
