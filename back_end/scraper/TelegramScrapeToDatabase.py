@@ -1,10 +1,10 @@
 from telethon import TelegramClient,events,sync, utils
-import asyncio
+# import asyncio
 import psycopg
 import os 
 from dotenv import load_dotenv
 import re
-import time
+# import time
 from rapidfuzz import fuzz
 
 
@@ -68,16 +68,22 @@ def get_binary_data(file):
 
 skiped_posts =0 
 word_key = "hackathon"
+
 cursor = connection.cursor()
 telegram_channel_1 = 'https://t.me/AlxEthiopiaOfficial'
+
+
+
+
 for message in client.iter_messages(telegram_channel_1,limit=2000):
     # print(utils.get_display_name(message.sender), message.message,"\n\n\n")
-        if(message.message == '' or message.message == None):
+        message_text = message.message.lower()
+        if(message.message == '' or message.message == None):  # pass messages that doesn't have any text or any empty message(i.e no media or other)
             # print("reason empty: ", message.id)
             skiped_posts += 1
             continue
 
-        if re.search( word_key,message.message) == None : # to search for a speciic word inside every message and if not to continue 
+        if re.search( word_key,message_text) == None : # to search for the speciic word inside every message and if not to continue 
             # print("reason not hackaton: ", message.id)
             skiped_posts += 1
             continue
@@ -95,22 +101,22 @@ for message in client.iter_messages(telegram_channel_1,limit=2000):
                 if message.photo:
                         image = message.download_media(file=bytes)
                 cursor.execute(insert_query, (message.id,source_link,message.date,message.message,image,'ALX','Telegram'))
-                
+                connection.commit()
         except psycopg.errors.UniqueViolation  as e:
             # print(f"{error_counter}) Duplicate values")
             # error_counter += 1
-            print("skipped exists in db: ", message.id)
+            print("skipped -> exists in db: ", message.id)
             connection.rollback()
         except psycopg.errors.InFailedSqlTransaction as e:
-            print("skipped unkown: ", message.id)
+            print("skipped -> unkown: ", message.id)
             # print(e)
         finally:
             continue
             
             
-client.run_until_disconnected()   
-        # connection.commit()
-print("skipped posts: ",skiped_posts)               
+            
+
+
 # test_mess = client.iter_messages(telegram_channel_1,limit=10)
 # for message in test_mess:
 #     #    if message.photo:
@@ -120,6 +126,50 @@ print("skipped posts: ",skiped_posts)
 #     print(message.sender)
 #     break
 
+print("skipped posts: ",skiped_posts) 
+
+
+
+
+
+
+@client.on(events.NewMessage(chats='https://t.me/testting_scrape'))
+async def my_event_handler(event):
+        # event_text = event.text.lower()
+        event_text = event.message.text.lower()
+        if re.search( word_key,event_text) != None : # to search for the speciic word inside every message and if not to continue 
+           try:
+                
+                # print(message.id, message.message,"\n\n\n")
+
+                # insert_query = f"INSERT INTO Telegram_Scraped_Data_v2 (post_id, source,data) VALUES(%s,%s,%s)"
+                insert_query = f"INSERT INTO Telegram_Scraped_Data_v3 (message_id,message_source_link,message_date, message_content,message_media_photo,channel_source, platform_source) VALUES(%s,%s,%s,%s,%s,%s,%s)"
+
+                # print(insert_query)
+                source_link = f"{telegram_channel_1}/{event.message.id}"
+                image = None
+                if event.message.photo:
+                        image =  await event.message.download_media(file=bytes)
+                cursor.execute(insert_query, (event.message.id,source_link,event.message.date,event.message.message,image,'ALX','Telegram'))
+                connection.commit()
+           except psycopg.errors.UniqueViolation  as e:
+            # print(f"{error_counter}) Duplicate values")
+            # error_counter += 1
+            print("skipped -> exists in db: ", event.message.id)
+            connection.rollback()
+           except psycopg.errors.InFailedSqlTransaction as e:
+            print("skipped -> unkown: ", event.message.id)
+            # print(e)
+        else:
+              print("skipped: not hackathon")
+        
+
+print("final skipped posts: ",skiped_posts)               
+
+
+client.start()
+client.run_until_disconnected()
+      
 
 cursor.close()
 connection.close()
