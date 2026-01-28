@@ -1,74 +1,69 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import psycopg
-import os 
+import os
 from dotenv import load_dotenv
 import base64
+
 load_dotenv()
 
-telegram_api_key = os.getenv("TELEGRAM_API_KEY")
-telegram_api_id = os.getenv("telegram_api_id")
-
-database_name = os.getenv("DB_NAME")
-database_user = os.getenv("DB_USER")
-database_password =  os.getenv("DB_PASSWORD")
-database_host = os.getenv("DB_HOST")
-database_port = os.getenv("DB_PORT")
-
-connection =  psycopg.connect(
-            dbname=database_name,
-            user=database_user,
-            host=database_host,
-            password=database_password,
-            port= database_port
-                            )
-
 app = FastAPI()
-origins =[
-    "http://localhost:3030"
-]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins= origins,
+    allow_origins=["http://localhost:3030"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-cursor = connection.cursor()
 
+def get_connection():
+    return psycopg.connect(
+        dbname=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT")
+    )
 
-select_query = "SELECT * FROM Telegram_Scraped_Data_v3"
+@app.get("/events")
+async def get_events(channel: str = None):
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                if channel and channel != "all":
+                    cursor.execute(
+                        "SELECT * FROM telegram_scraped_data_v3 WHERE channel_username = %s",
+                        (channel,)
+                    )
+                else:
+                    cursor.execute("SELECT * FROM telegram_scraped_data_v3")
+                
+                rows = cursor.fetchall()
+                events_list = []
 
-cursor.execute(select_query)
+                for row in rows:
+                    image_bytes = None
+                    if row[4] is not None:
+                        image_bytes = row[4].tobytes() if isinstance(row[4], memoryview) else row[4]
+                    
+                    events_list.append({
+                        "message_id": row[0],
+                        "source_link": row[1],
+                        "message_date": row[2].isoformat() if row[2] else None,
+                        "message_info": row[3] or "",
+                        "message_image": "" if image_bytes is None else base64.b64encode(image_bytes).decode(),
+                        "source_channel": row[5] or "Online",
+                        "source_platform": row[6] or "",
+                        "channel_username": row[7] or "",
+                        "channel_name": row[8] or "",
+                        "register_link": None,
+                        "tags": [],
+                        "event_type": "Tech Event"
+                    })
 
-selected_data = cursor.fetchall()
-modified_selected_data_dict = {}
-counter = 0
-for data in selected_data:
-    modified_selected_data_dict[f"post{counter}"]= {
-        "message_id": data[0],
-        "source_link": data[1],
-        "message_date": data[2],
-        "message_info": data[3],
-        "message_image":   "" if data[4] == None  else base64.b64encode(data[4]).decode("utf-8"),
-        "source_channel": data[5],
-        "source_platform": data[6]
-    }
-    counter += 1
+                return {"events": events_list}
 
-
-# for key in modified_selected_data_dict:
-#     print(key, modified_selected_data_dict[key], "\n\n")
-
-@app.get('/')
-async def events():
-    return {"boy": "welcome my child"}
-
-
-@app.get('/events')
-async def events():
-    return modified_selected_data_dict
-
-cursor.close()
-connection.close()
+    except Exception as e:
+        print(f"Database error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch events")

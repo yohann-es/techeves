@@ -1,0 +1,11 @@
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+print(
+    os.getenv("DB_NAME"),
+    os.getenv("DB_USER"),
+    os.getenv("DB_HOST"),
+    os.getenv("DB_PORT")
+)

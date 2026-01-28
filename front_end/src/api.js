@@ -7,4 +7,3 @@ const api = axios.create({
 export default api;
 
 
-// could have used the javascript built in fetch

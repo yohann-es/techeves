@@ -1,144 +1,123 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import api from "../api.js";
 import Card from './Card.jsx';
 import EventsList from './EventsList.jsx';
+import LoadingSpinner from './LoadingSpinner.jsx';
 
-
-/*
- useState for data inside the functinal body and does not interact with the outside
- useEffect for a data/state that intercate to outside entities 
-
- not sure i understand them yet but i have a vague idea but its beacasue may be
- i have seen them in action properly and know thier diffrence
- 
- for more info visit:
-https://www.geeksforgeeks.org/reactjs/difference-between-usestate-and-useeffect-hook-in-reactjs/
- */
-
- const Events = () => {
+const Events = ({ refreshKey }) => {
   const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [channel, setChannel] = useState('all');
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
-      const response = await api.get('/events');
-      // console.log(response.data)
-      setEvents(response.data);
-    } catch (error) {
-      console.error("Error fetching events", error);
-    }
-  };
+      setLoading(true);
+      setError(null);
 
-  useEffect(() => {
-    fetchEvents();
+      const response = await api.get('/events');
+      setEvents(response.data.events || []);
+    } catch (err) {
+      console.error("Error fetching events", err);
+      setError("Failed to load events. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Convert your object into a list to map over
-  const eventArray = Object.values(events);
-  const recentEventArray = eventArray
-  return (
-    <>
-    <div style={{ padding: '1rem' }}>
-        <Card bg='bg-gray-100'>
-        <h2 className='text-5xl font-bold text-gray-400' >Events</h2>
-      </Card>
-      </div>
-      
+  // 🔁 Fetch on load AND when "Get Updates" is clicked
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents, refreshKey]);
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
-        {recentEventArray.map((event, index) => (
-          <EventsList event={event} key={event.database_id}  />
-        ))}
-      </div>
-    
-    </>
+  // Local filtering
+  const filteredEvents =
+    channel === 'all'
+      ? events
+      : events.filter(event => event.channel_username === channel);
+
+  return (
+    <section id="events" className="container mx-auto px-4 py-8">
+
+      {/* Loading */}
+      {loading && (
+        <div className="min-h-[400px] flex items-center justify-center">
+          <LoadingSpinner />
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <Card bg="bg-red-50">
+          <div className="text-center p-8">
+            <h3 className="text-xl font-semibold text-red-600 mb-2">
+              Error Loading Events
+            </h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={fetchEvents}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg"
+            >
+              Try Again
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* Events */}
+      {!loading && !error && (
+        <>
+          {/* Header */}
+          <Card bg="bg-gradient-to-r from-blue-50 to-indigo-50" className="mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-4xl font-bold text-gray-800 mb-2">
+                  Tech Events
+                </h2>
+                <p className="text-gray-600">
+                  Curated from top Telegram tech channels
+                </p>
+              </div>
+
+              {/* Channel Filter */}
+              <div className="flex items-center space-x-4">
+                <select
+                  value={channel}
+                  onChange={(e) => setChannel(e.target.value)}
+                  className="px-4 py-2 border rounded-lg"
+                >
+                  <option value="all">All Channels</option>
+                  <option value="TechsAfrica">Techs Africa</option>
+                  <option value="AlxEthiopiaOfficial">ALX Ethiopia</option>
+                  <option value="EthioTechnollogy">Ethio Technology</option>
+                  <option value="ethiotech_discussion">EthioTech Discussion</option>
+                </select>
+
+                <span className="text-sm text-gray-500">
+                  {filteredEvents.length} event
+                  {filteredEvents.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Events Grid */}
+          {filteredEvents.length === 0 ? (
+            <Card className="text-center py-12">
+              <h3 className="text-xl font-semibold mb-2">No Events Found</h3>
+              <p className="text-gray-500">Try another channel.</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredEvents.map(event => (
+                <EventsList key={event.message_id} event={event} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 };
 
 export default Events;
-
-/**
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
-
-      {eventArray.map((event, index) => (
-
-        <div 
-      key={index} 
-      className="bg-white rounded-xl shadow-md relative p-4 break-words"
-    >
-      <div className="text-gray-600 my-2">ALX</div>
-      <h3 className="text-xl font-bold mb-3">Hackathon Event</h3>
-
-      <p className="mb-5 whitespace-pre-wrap text-wrap break-words">
-        {event.post_info}
-      </p>
-
-
-      <div className="border border-gray-100 mb-5"></div>
-
-      <div className="flex flex-col lg:flex-row justify-between mb-4">
-        <div className="text-orange-700 mb-3 flex items-center gap-2">
-          <i className="fa-solid fa-location-dot text-lg"></i>
-          Telegram
-        </div>
-
-        <a
-          target="_blank"
-          href={event.source_link}
-          className="h-[36px] bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-center text-sm"
-        >
-          View Source
-        </a>
-      </div>
-    </div>
-      ))}
-
-    </div>
- */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-/*
-
-<div
-          key={index}
-          style={{
-            border: '1px solid #ddd',
-            borderRadius: '10px',
-            padding: '15px',
-            marginBottom: '15px',
-            backgroundColor: '#f9f9f9'
-          }}
-        >
-          <p style={{ whiteSpace: 'pre-wrap' }}>{event.post_info}</p>
-
-          <a
-            href={event.source_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-block',
-              marginTop: '10px',
-              padding: '8px 12px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              borderRadius: '5px',
-              textDecoration: 'none'
-            }}
-          >
-            🔗 View Source
-          </a>
-        </div>
-*/
